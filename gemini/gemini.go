@@ -137,3 +137,40 @@ func generateReply(modelName string, messages []database.Message) (string, error
 	fmt.Println()
 	return fullResponse, nil
 }
+
+func ListModels() ([]string, error) {
+	ctx := context.Background()
+
+	if err := godotenv.Load(); err != nil {
+		log.Println("Error loading .env file:", err) // Continue even on error.
+	}
+	apiKey := os.Getenv("GEMINI_API_KEY")
+	if apiKey == "" {
+		return nil, fmt.Errorf("GEMINI_API_KEY environment variable not set")
+	}
+
+	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create genai client: %w", err)
+	}
+	defer client.Close()
+
+	var modelNames []string
+
+	iter := client.ListModels(ctx)
+
+	for {
+		model, err := iter.Next()
+
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("error listing models: %w", err)
+		}
+
+		modelNames = append(modelNames, model.DisplayName)
+	}
+
+	return modelNames, nil
+}
