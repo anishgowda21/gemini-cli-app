@@ -228,7 +228,7 @@ func ListModels() ([]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error listing models: %w", err)
 		}
-		modelNames = append(modelNames, model.DisplayName)
+		modelNames = append(modelNames, model.Name)
 	}
 
 	return modelNames, nil

@@ -81,10 +81,11 @@ func AddMessage(convoID, role, content string) error {
 	if result.Error != nil {
 		return fmt.Errorf("error adding message: %w", result.Error)
 	}
+
 	return nil
 }
 
-func getMessageByConversationID(convoID string) ([]Message, error) {
+func GetMessagesByConversationID(convoID string) ([]Message, error) {
 	var messages []Message
 
 	result := db.Where("conversation_id = ?", convoID).Order("created_at asc").Find(&messages)
