@@ -1,0 +1,25 @@
+# Compiled Object files
+*.o
+*.a
+*.so
+
+# Executables
+*.exe
+*.exe~
+*.dll
+*.test
+
+# Dependency directories (adjust as needed)
+vendor/
+
+# IDE-specific files (optional)
+.idea/
+*.swp
+*~
+.DS_Store
+
+# .env file - VERY IMPORTANT TO IGNORE THIS
+.env
+
+# SQLite database file
+test.db
