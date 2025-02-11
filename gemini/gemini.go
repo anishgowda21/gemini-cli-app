@@ -76,8 +76,8 @@ func configureModel(model *genai.GenerativeModel) {
 	}
 
 	config := &genai.GenerationConfig{}
-	config.SetMaxOutputTokens(2048)
-	config.SetTemperature(0.7)
+	config.SetMaxOutputTokens(4096)
+	config.SetTemperature(0.8)
 	config.SetTopP(0.9)
 	model.GenerationConfig = *config
 }
@@ -86,13 +86,13 @@ func initializeChatHistory(chat *genai.ChatSession) {
 	chat.History = []*genai.Content{
 		{
 			Parts: []genai.Part{
-				genai.Text("You are a helpful Chatbot. Provide direct responses without any prefixes like 'REPLY:'. Keep responses short and precise."),
+				genai.Text("You are a helpful AI assistant. Provide informative responses that are detailed enough to be useful while remaining concise. Aim for 2-3 paragraphs for most responses unless specifically asked for more detail."),
 			},
 			Role: roleUser,
 		},
 		{
 			Parts: []genai.Part{
-				genai.Text("Understood. I will provide direct responses without prefixes."),
+				genai.Text("I understand. I will provide balanced responses that are both informative and concise."),
 			},
 			Role: roleModel,
 		},

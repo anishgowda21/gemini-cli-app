@@ -222,3 +222,44 @@ func showConversationMessages(convoID string) {
 		fmt.Printf("[%s] %s: %s\n", msg.CreatedAt.Format("15:04:05"), msg.Role, msg.Content)
 	}
 }
+
+func deleteConversation() {
+	convos, err := database.ListConversations()
+	if err != nil {
+		fmt.Println("Error retrieving conversations:", err)
+		return
+	}
+
+	if len(convos) == 0 {
+		fmt.Println("No conversations found.")
+		return
+	}
+
+	fmt.Println("\nSelect a conversation to delete:")
+	for i, convo := range convos {
+		cleanTitle := strings.TrimPrefix(convo.Title, "**1. ")
+		cleanTitle = strings.TrimSuffix(cleanTitle, "**")
+		fmt.Printf("%d) %s (Model: %s)\n", i+1, cleanTitle, convo.Model)
+	}
+
+	choice, err := getValidChoice("Enter choice number: ", len(convos))
+	if err != nil {
+		fmt.Println("Error selecting conversation:", err)
+		return
+	}
+
+	selectedConvo := convos[choice-1]
+
+	confirm := readInput(fmt.Sprintf("Are you sure you want to delete '%s'? (y/n): ", selectedConvo.Title))
+	if strings.ToLower(confirm) != "y" {
+		fmt.Println("Deletion cancelled.")
+		return
+	}
+
+	if err := database.DeleteConversation(selectedConvo.ID); err != nil {
+		fmt.Println("Error deleting conversation:", err)
+		return
+	}
+
+	fmt.Printf("Conversation '%s' has been deleted.\n", selectedConvo.Title)
+}

@@ -132,3 +132,16 @@ func UpdateConversation(convoID string) error {
 
 	return nil
 }
+
+func DeleteConversation(convoID string) error {
+
+	if err := db.Where("conversation_id = ?", convoID).Delete(&Message{}).Error; err != nil {
+		return fmt.Errorf("error deleting messages: %w", err)
+	}
+
+	if err := db.Delete(&Conversation{}, "id = ?", convoID).Error; err != nil {
+		return fmt.Errorf("error deleting conversation: %w", err)
+	}
+
+	return nil
+}

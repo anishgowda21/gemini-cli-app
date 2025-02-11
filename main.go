@@ -17,8 +17,9 @@ func main() {
 		fmt.Println("1) List conversations")
 		fmt.Println("2) Start new conversation")
 		fmt.Println("3) Continue a conversation")
-		fmt.Println("4) List available models") // New option
-		fmt.Println("5) Exit")
+		fmt.Println("4) List available models")
+		fmt.Println("5) Delete conversation")
+		fmt.Println("6) Exit")
 		choice := readInput("Enter choice: ")
 
 		switch choice {
@@ -35,10 +36,12 @@ func main() {
 			} else {
 				fmt.Println("\nAvailable Models:")
 				for _, model := range models {
-					fmt.Println(model)
+					fmt.Println(model.DisplayName)
 				}
 			}
 		case "5":
+			deleteConversation()
+		case "6":
 			fmt.Println("Exiting...")
 			return
 		default:
