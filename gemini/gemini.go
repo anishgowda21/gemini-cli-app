@@ -22,11 +22,24 @@ const (
 	agentPrefix = "Agent: "
 )
 
+type GeminiModel struct {
+	DisplayName string
+	ModelID     string
+}
+
+var supportedModels = []GeminiModel{
+	{DisplayName: "Gemini Pro", ModelID: "models/gemini-pro"},
+	{DisplayName: "Gemini 1.5 Pro", ModelID: "models/gemini-1.5-pro"},
+	{DisplayName: "Gemini 2.0 Pro", ModelID: "models/gemini-2.0-pro-exp"},
+	{DisplayName: "Gemini Pro Vision", ModelID: "models/gemini-pro-vision"},
+	{DisplayName: "Gemini 1.5 Pro Latest", ModelID: "models/gemini-1.5-pro-latest"},
+}
+
 func initGeminiClient() (*genai.Client, context.Context, error) {
 	ctx := context.Background()
 
 	if err := godotenv.Load(); err != nil {
-		log.Println("Error loading .env file:", err) // Continue even on error.
+		log.Println("Error loading .env file:", err)
 	}
 
 	apiKey := os.Getenv("GEMINI_API_KEY")
@@ -42,7 +55,6 @@ func initGeminiClient() (*genai.Client, context.Context, error) {
 	return client, ctx, nil
 }
 
-// configureModel sets up common configuration for the model
 func configureModel(model *genai.GenerativeModel) {
 	model.SafetySettings = []*genai.SafetySetting{
 		{
@@ -70,27 +82,33 @@ func configureModel(model *genai.GenerativeModel) {
 	model.GenerationConfig = *config
 }
 
-// initializeChatHistory sets up the initial chat history
 func initializeChatHistory(chat *genai.ChatSession) {
 	chat.History = []*genai.Content{
 		{
 			Parts: []genai.Part{
-				genai.Text("You are a helpful Chatbot, that helps users by answring their questions. The responses should be short, and precise."),
+				genai.Text("You are a helpful Chatbot. Provide direct responses without any prefixes like 'REPLY:'. Keep responses short and precise."),
 			},
 			Role: roleUser,
 		},
 		{
 			Parts: []genai.Part{
-				genai.Text("Understood. I will do my best to be helpful!"),
+				genai.Text("Understood. I will provide direct responses without prefixes."),
 			},
 			Role: roleModel,
 		},
 	}
 }
 
-// processStream handles streaming responses from the model
+func streamOutput(text string) {
+	for _, char := range text {
+		fmt.Printf("%c", char)
+		time.Sleep(30 * time.Millisecond)
+	}
+}
+
 func processStream(iter *genai.GenerateContentResponseIterator, printOutput bool) (string, error) {
-	fullResponse := ""
+	var buffer strings.Builder
+
 	for {
 		resp, err := iter.Next()
 		if err == iterator.Done {
@@ -107,16 +125,24 @@ func processStream(iter *genai.GenerateContentResponseIterator, printOutput bool
 			if cand.Content != nil {
 				for _, part := range cand.Content.Parts {
 					if text, ok := part.(genai.Text); ok {
+						response := string(text)
 						if printOutput {
-							fmt.Print(string(text))
+							streamOutput(response)
 						}
-						fullResponse += string(text)
+						buffer.WriteString(response)
 					}
 				}
 			}
 		}
-		time.Sleep(200 * time.Millisecond)
 	}
+
+	fullResponse := buffer.String()
+	// Remove any REPLY: prefix that might appear
+	fullResponse = strings.TrimPrefix(fullResponse, "REPLY:")
+	fullResponse = strings.TrimSpace(fullResponse)
+
+	fmt.Println()
+
 	return fullResponse, nil
 }
 
@@ -130,17 +156,18 @@ func StartConversation(modelName, userMessage string) (title, reply string, err 
 	model := client.GenerativeModel(modelName)
 	configureModel(model)
 
-	prompt := fmt.Sprintf(`You are a helpful chatbot. I will provide an initial message. Respond with two parts, separated by "---":
+	prompt := fmt.Sprintf(`You are a helpful chatbot. Respond to this message in two parts:
 
-	1.  TITLE: A concise title (maximum 5 words) for this conversation.
-	2.  REPLY: A response to my initial message.
+	1. A concise title (maximum 5 words) for this conversation
+	2. Your response to the message
 
-	Initial message: %s`, userMessage)
+	Separate the two parts with "---". Do not add any labels or prefixes to either part.
+
+	Message: %s`, userMessage)
 
 	chat := model.StartChat()
 	initializeChatHistory(chat)
 
-	// Use SendMessage instead of SendMessageStream for single response
 	resp, err := chat.SendMessage(ctx, genai.Text(prompt))
 	if err != nil {
 		return "", "", fmt.Errorf("error sending message: %w", err)
@@ -159,18 +186,23 @@ func StartConversation(modelName, userMessage string) (title, reply string, err 
 
 	parts := strings.SplitN(fullResponse, "---", 2)
 	if len(parts) != 2 {
-		return "", "", fmt.Errorf("could not parse title and reply.  Expected format 'TITLE---REPLY', got: %s", fullResponse)
+		return "", "", fmt.Errorf("could not parse response format. Got: %s", fullResponse)
 	}
 
 	title = strings.TrimSpace(parts[0])
 	reply = strings.TrimSpace(parts[1])
 
-	// Print reply with streaming effect
+	// Remove any remaining prefixes
+	title = strings.TrimPrefix(title, "TITLE:")
+	title = strings.TrimPrefix(title, "Title:")
+	reply = strings.TrimPrefix(reply, "REPLY:")
+	reply = strings.TrimPrefix(reply, "Reply:")
+
+	title = strings.TrimSpace(title)
+	reply = strings.TrimSpace(reply)
+
 	fmt.Print(agentPrefix)
-	for _, r := range reply {
-		fmt.Printf("%c", r)
-		time.Sleep(50 * time.Millisecond)
-	}
+	streamOutput(reply)
 	fmt.Println()
 
 	return title, reply, nil
@@ -189,7 +221,6 @@ func GenerateReply(modelName string, messages []database.Message) (string, error
 	chat := model.StartChat()
 	initializeChatHistory(chat)
 
-	// Add message history
 	for _, msg := range messages[:len(messages)-1] {
 		role := roleUser
 		if msg.Role == "assistant" {
@@ -210,26 +241,6 @@ func GenerateReply(modelName string, messages []database.Message) (string, error
 	return processStream(iter, true)
 }
 
-func ListModels() ([]string, error) {
-	client, ctx, err := initGeminiClient()
-	if err != nil {
-		return nil, err
-	}
-	defer client.Close()
-
-	var modelNames []string
-	iter := client.ListModels(ctx)
-
-	for {
-		model, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return nil, fmt.Errorf("error listing models: %w", err)
-		}
-		modelNames = append(modelNames, model.Name)
-	}
-
-	return modelNames, nil
+func ListModels() ([]GeminiModel, error) {
+	return supportedModels, nil
 }

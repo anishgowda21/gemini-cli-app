@@ -16,7 +16,7 @@ func main() {
 		fmt.Println("\n=== GEMINI CLI Chat App ===")
 		fmt.Println("1) List conversations")
 		fmt.Println("2) Start new conversation")
-		fmt.Println("3) Update existing conversation (Add message)")
+		fmt.Println("3) Continue a conversation")
 		fmt.Println("4) List available models") // New option
 		fmt.Println("5) Exit")
 		choice := readInput("Enter choice: ")
@@ -27,7 +27,7 @@ func main() {
 		case "2":
 			startNewConversation()
 		case "3":
-			updateConversation()
+			continueConversation()
 		case "4":
 			models, err := gemini.ListModels()
 			if err != nil {
