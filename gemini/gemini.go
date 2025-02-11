@@ -76,7 +76,7 @@ func configureModel(model *genai.GenerativeModel) {
 	}
 
 	config := &genai.GenerationConfig{}
-	config.SetMaxOutputTokens(4096)
+	config.SetMaxOutputTokens(2048)
 	config.SetTemperature(0.8)
 	config.SetTopP(0.9)
 	model.GenerationConfig = *config
@@ -86,8 +86,7 @@ func initializeChatHistory(chat *genai.ChatSession) {
 	chat.History = []*genai.Content{
 		{
 			Parts: []genai.Part{
-				genai.Text("You are a helpful AI assistant. Provide informative responses that are detailed enough to be useful while remaining concise. Aim for 2-3 paragraphs for most responses unless specifically asked for more detail."),
-			},
+				genai.Text("You are a helpful AI assistant. Keep responses concise and to the point by default - typically 2-3 sentences. Only provide longer responses (2-3 paragraphs) when explicitly asked for details or for complex topics that cannot be explained briefly. Always prioritize clarity and relevance over length.")},
 			Role: roleUser,
 		},
 		{
@@ -137,11 +136,8 @@ func processStream(iter *genai.GenerateContentResponseIterator, printOutput bool
 	}
 
 	fullResponse := buffer.String()
-	// Remove any REPLY: prefix that might appear
 	fullResponse = strings.TrimPrefix(fullResponse, "REPLY:")
 	fullResponse = strings.TrimSpace(fullResponse)
-
-	fmt.Println()
 
 	return fullResponse, nil
 }

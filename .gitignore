@@ -22,4 +22,4 @@ vendor/
 .env
 
 # SQLite database file
-test.db
+*.db
